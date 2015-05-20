@@ -45,30 +45,29 @@ func (db *DB) Get() redis.Conn {
 /*
  * create user in redis layer
  */
-func (db *DB) CreateUser(login, name string) (bool, error) {
+func (db *DB) CreateUser(login, name string) (int, error) {
 	c := db.Get()
 	if c == nil {
 		fmt.Printf("db is nil\n")
+		return -1, nil
 	}
 	defer c.Close()
 	// check if users:<login> hash exists
 	existsr, err := c.Do("HEXISTS", "users:", login)
 	if err != nil {
-		return false, err
+		return -1, err
 	}
 	exists, _ := redis.Int(existsr, nil)
-	fmt.Printf("exists is: %v\n", exists)
 	if exists == 1 {
-		return false, err
+		return -1, err
 	}
 
 	// increment global user count
 	idr, err := c.Do("INCR", "user:id")
 	if err != nil {
-		return false, err
+		return -1, err
 	}
 	id, _ := redis.Int(idr, nil)
-	fmt.Printf("id is: %v\n", id)
 
 	/* using pipeline mode */
 	c.Send("MULTI")
@@ -78,19 +77,73 @@ func (db *DB) CreateUser(login, name string) (bool, error) {
 		"id", id, "name", name, "followers", "0", "following", "0",
 		"posts", "0", "signup", time.Now().Unix())
 	if _, err := c.Do("EXEC"); err != nil {
-		return false, err
+		return -1, err
 	}
 
+	return id, nil
+}
+
+func (db *DB) DeleteUser(uid int) (bool, error) {
+	c := db.Get()
+	if c == nil {
+		return false, nil
+	}
+	defer c.Close()
+
+	loginr, err := c.Do("HGET", "user:"+strconv.Itoa(uid), "login")
+	if err != nil {
+		return false, err
+	}
+	login, _ := redis.String(loginr, nil)
+	// user exists
+	if login != "" {
+		c.Do("MULTI")
+		c.Do("HDEL", "users:", login)
+		c.Do("HDEL", "user:"+strconv.Itoa(uid), "login")
+		c.Do("HDEL", "user:"+strconv.Itoa(uid), "id")
+		c.Do("HDEL", "user:"+strconv.Itoa(uid), "name")
+		c.Do("HDEL", "user:"+strconv.Itoa(uid), "followers")
+		c.Do("HDEL", "user:"+strconv.Itoa(uid), "following")
+		c.Do("HDEL", "user:"+strconv.Itoa(uid), "posts")
+		c.Do("HDEL", "user:"+strconv.Itoa(uid), "signup")
+		if _, err := c.Do("EXEC"); err != nil {
+			return false, err
+		}
+	}
 	return true, nil
 }
 
+func (db *DB) GetUser(uid int) (*User, error) {
+	var user User
+	c := db.Get()
+	if c == nil {
+		return nil, nil
+	}
+	defer c.Close()
+
+	r, err := redis.Values(c.Do("HGETALL", "user:"+strconv.Itoa(uid)))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := redis.ScanStruct(r, &user); err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 /*
- * create article for user with string content
+ * create status for user with string content
  */
-func (db *DB) CreateStatus(message string, uid int) (bool, error) {
+func (db *DB) CreateStatus(message string, uid int) (int, error) {
 	var login string
 	var sid int
 	c := db.Get()
+	if c == nil {
+		fmt.Printf("db is nil\n")
+		return -1, nil
+	}
 	defer c.Close()
 
 	c.Do("MULTI")
@@ -101,21 +154,21 @@ func (db *DB) CreateStatus(message string, uid int) (bool, error) {
 	reply, err := redis.Values(c.Do("EXEC"))
 
 	if err != nil {
-		return false, err
+		return -1, err
 	}
 
 	if _, err := redis.Scan(reply, &login, &sid); err != nil {
-		return false, err
+		return -1, err
 	}
-
-	fmt.Printf("login = %v\n", login)
-	fmt.Printf("sid = %v\n", sid)
-
 	// set status:<id>
 	if _, err := c.Do("HMSET", "status:"+strconv.Itoa(sid), "message", message,
 		"posted", time.Now().Unix(), "id", sid, "uid", uid, "login", login); err != nil {
-		return false, err
+		return -1, err
 	}
 
-	return true, nil
+	if _, err := c.Do("HINCRBY", "user:"+strconv.Itoa(uid), "posts", 1); err != nil {
+		return -1, err
+	}
+
+	return sid, nil
 }

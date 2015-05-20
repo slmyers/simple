@@ -1,20 +1,33 @@
 package main
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestPostUser(t *testing.T) {
 	db := NewDB("localhost:6379")
 	if db == nil {
 		t.Error("db is nil")
 	}
-	r, err := db.CreateUser("inthe6", "Henry")
+	uid, err := db.CreateUser("TestUser", "testy")
 
 	if err != nil {
-		t.Error("recieved error: ", err)
+		t.Error("recieved error while creating user: ", err)
+	}
+
+	if uid == -1 {
+		t.Error("uid for new user is: ", uid)
+	}
+
+	r, err := db.DeleteUser(uid)
+
+	if err != nil {
+		t.Error("recieved error while deleting user: ", err)
 	}
 
 	if r != true {
-		t.Error("expected true got: ", r)
+		t.Error("expected true when delete user got: ", r)
 	}
 
 }
@@ -25,14 +38,31 @@ func TestPostStatus(t *testing.T) {
 		t.Error("db is nil")
 	}
 
-	r, err := db.CreateStatus("this is a status", 9)
+	sid, err := db.CreateStatus("this is a status", 10)
 
 	if err != nil {
 		t.Error("recieved error: ", err)
 	}
 
-	if r != true {
-		t.Error("expected true got: ", r)
+	if sid == -1 {
+		t.Error("expected sid > 1 got: ", sid)
+	}
+}
+
+func TestGetUser(t *testing.T) {
+	db := NewDB("localhost:6379")
+	if db == nil {
+		t.Error("db is nil")
+	}
+	user, err := db.GetUser(10)
+
+	if err != nil {
+		t.Error("recieved error: ", err)
 	}
 
+	if user == nil {
+		t.Error("user is nil")
+	}
+
+	fmt.Printf("user = %v\n", user)
 }

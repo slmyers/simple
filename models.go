@@ -1,36 +1,36 @@
 package main
 
 type User struct {
-	login     string `redis:"login"`
-	uid       int    `redis:id`
-	name      string `redis:"name"`
-	followers int    `redis:followers`
-	following int    `redis:following`
-	posts     int    `redis:posts`
-	signup    int64  `redis:signup`
+	Login     string `redis:"login"`
+	Id        int    `redis:"id"`
+	Name      string `redis:"name"`
+	Followers int    `redis:"followers"`
+	Following int    `redis:"following"`
+	Posts     int    `redis:"posts"`
+	Signup    int64  `redis:"signup"`
 }
 
 type Status struct {
-	message string `redis:"message"`
-	posted  int64  `redis:"posted"`
-	id      int    `redis:"id"`
-	uid     int    `redis:"uid"`
-	login   string `redis:"login"`
+	Message string `redis:"message"`
+	Posted  int64  `redis:"posted"`
+	Id      int    `redis:"id"`
+	Uid     int    `redis:"uid"`
+	Login   string `redis:"login"`
 }
 
 type Timeline struct {
-	timestamp int64 `redis:"timestamp"`
-	status    int   `redis:"article"`
+	Timestamp int64 `redis:"timestamp"`
+	Status    int   `redis:"article"`
 }
 
 type Follow struct {
-	timestamp int64 `redis:"timestamp"`
-	user      int   `redis:"user"`
+	Timestamp int64 `redis:"timestamp"`
+	User      int   `redis:"user"`
 }
 
 type Follower struct {
-	timestamp int64 `redis:"timestamp"`
-	user      int   `redis:"user"`
+	Timestamp int64 `redis:"timestamp"`
+	User      int   `redis:"user"`
 }
 
 type Timelines []Timeline
