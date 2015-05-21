@@ -66,3 +66,21 @@ func TestGetUser(t *testing.T) {
 
 	fmt.Printf("user = %v\n", user)
 }
+
+func TestGetStatus(t *testing.T) {
+	db := NewDB("localhost:6379")
+	if db == nil {
+		t.Error("db is nil")
+	}
+	status, err := db.GetStatus(9)
+
+	if err != nil {
+		t.Error("recieved error: ", err)
+	}
+
+	if status == nil {
+		t.Error("status is nil")
+	}
+
+	fmt.Printf("status = %v\n", status)
+}

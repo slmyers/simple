@@ -19,8 +19,7 @@ type Status struct {
 }
 
 type Timeline struct {
-	Timestamp int64 `redis:"timestamp"`
-	Status    int   `redis:"article"`
+	Status []int `redis:"status"`
 }
 
 type Follow struct {
@@ -33,8 +32,5 @@ type Follower struct {
 	User      int   `redis:"user"`
 }
 
-type Timelines []Timeline
-type Following []Following
-type Followers []Follower
-type Statuses []Status
+type Timeline []Status
 type Users []User

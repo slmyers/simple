@@ -172,3 +172,48 @@ func (db *DB) CreateStatus(message string, uid int) (int, error) {
 
 	return sid, nil
 }
+
+func (db *DB) GetStatus(sid int) (*Status, error) {
+	var status Status
+	c := db.Get()
+	if c == nil {
+		fmt.Printf("db is nil\n")
+		return nil, nil
+	}
+
+	r, err := redis.Values(c.Do("HGETALL", "status:"+strconv.Itoa(sid)))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := redis.ScanStruct(r, &status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}
+
+func (db *DB) GetStatusMsg(uid, page, count int) (*Timeline, error) {
+	timeline = new(Timeline)
+	timeline.Status = make([]int, page)
+	timeLineIndex := 0
+	c := db.Get()
+	if c == nil {
+		fmt.Printf("db is nil\n")
+		return nil, nil
+	}
+
+	r, err := redis.Values(c.Do("ZREVRANGE", "timeline:"+strconv.Itoa(uid),
+		strconv.Itoa((page-1)*count), strconv.Itoa(page*(count-1))))
+
+	for i := 0; i < len(r); i += 2 {
+		timeline.Status[timeLineIndex], e = redis.Int(r[0], nil)
+		if e != nil {
+			return nil, e
+		}
+		timeLineIndex++
+	}
+
+	return timeline, nil
+}
