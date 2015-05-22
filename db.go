@@ -190,11 +190,8 @@ func (db *DB) GetStatus(sid int) (*Status, error) {
 	return &status, nil
 }
 
-func (db *DB) GetUserTimeline(uid, page, count int) (*Timeline, error) {
-	timeline := new(Timeline)
-	timeline.Posts = make([]Status, page)
-	//timeLineIndex := 0
-	statusID := make([]string, page)
+func (db *DB) GetUserTimeline(uid, page, count int) ([]int, error) {
+	timeline := make([]int, page)
 	c := db.Get()
 	if c == nil {
 		fmt.Printf("db is nil\n")
@@ -202,17 +199,15 @@ func (db *DB) GetUserTimeline(uid, page, count int) (*Timeline, error) {
 	}
 	defer c.Close()
 
-	r, _ := redis.Values(c.Do("ZREVRANGE", "timeline:"+strconv.Itoa(uid),
+	r, err := redis.Values(c.Do("ZREVRANGE", "timeline:"+strconv.Itoa(uid),
 		strconv.Itoa((page-1)*count), strconv.Itoa(page*(count-1))))
 
-	for i := range r {
-		s, err := redis.Values(c.Do("HGETALL", "status:"+statusID[i]))
-		if err != nil {
-			return nil, err
-		}
-		if err := redis.ScanStruct(s, timeline.Posts[i]); err != nil {
-			return nil, err
-		}
+	if err != nil {
+		return nil, err
+	}
+
+	if err := redis.ScanSlice(r, &timeline); err != nil {
+		panic(err)
 	}
 
 	return timeline, nil
@@ -324,7 +319,6 @@ func (db *DB) PostStatus(uid int, message string) (int, error) {
 
 func syndicateStatus(uid, sid, time string, c redis.Conn) (bool, error) {
 	defer c.Close()
-
 	r, err := redis.Values(c.Do("ZRANGEBYSCORE", "followers:"+uid, "-inf",
 		"+inf"))
 
@@ -336,8 +330,6 @@ func syndicateStatus(uid, sid, time string, c redis.Conn) (bool, error) {
 	if err := redis.ScanSlice(r, &followerSlice); err != nil {
 		return false, nil
 	}
-	fmt.Printf("followerSlice = %v\n", followerSlice)
-
 	c.Do("MULTI")
 	for i := range followerSlice {
 		c.Do("ZADD", "timeline:"+followerSlice[i], time, sid)

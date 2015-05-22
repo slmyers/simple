@@ -111,3 +111,14 @@ func TestPost(t *testing.T) {
 	}
 
 }
+
+func TestTimeline(t *testing.T) {
+	db := NewDB("localhost:6379")
+	if db == nil {
+		t.Error("db is nil")
+	}
+
+	if res, err := db.GetUserTimeline(100, 1, 30); err != nil {
+		t.Error("error pulling timeline", res, err)
+	}
+}

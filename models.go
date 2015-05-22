@@ -17,19 +17,3 @@ type Status struct {
 	Uid     int    `redis:"uid"`
 	Login   string `redis:"login"`
 }
-
-type Timeline struct {
-	Posts []Status
-}
-
-type Follow struct {
-	Timestamp int64 `redis:"timestamp"`
-	User      int   `redis:"user"`
-}
-
-type Follower struct {
-	Timestamp int64 `redis:"timestamp"`
-	User      int   `redis:"user"`
-}
-
-type Users []User
