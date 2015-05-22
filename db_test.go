@@ -81,13 +81,3 @@ func TestFollow(t *testing.T) {
 		t.Error("error checking to see if unfollowing")
 	}
 }
-
-func TestUnFollow(t *testing.T) {
-	db := NewDB("localhost:6379")
-	if db == nil {
-		t.Error("db is nil")
-	}
-	c := db.Get()
-	defer c.Close()
-
-}
