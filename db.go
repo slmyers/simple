@@ -219,7 +219,6 @@ func (db *DB) GetUserTimeline(uid, page, count int) (*Timeline, error) {
 }
 
 func (db *DB) Follow(uid, otherid int) (bool, error) {
-	fmt.Printf("follow here:\n")
 	c := db.Get()
 	if c == nil {
 		fmt.Printf("db is nil\n")
@@ -255,16 +254,17 @@ func (db *DB) Unfollow(uid, otherid int) (bool, error) {
 	}
 	defer c.Close()
 
-	fkey1 := "following:" + strconv.Itoa(uid)
-	fkey2 := "followers:" + strconv.Itoa(otherid)
+	fkey1 := "following:" + strconv.Itoa(otherid)
+	fkey2 := "followers:" + strconv.Itoa(uid)
 
-	r, err := c.Do("ZSCORE", fkey1, strconv.Itoa(otherid))
+	r, err := redis.String(c.Do("ZSCORE", fkey1, strconv.Itoa(otherid)))
 
 	if err != nil {
+		fmt.Printf("error checking to see if following.\n")
 		return false, err
 	}
 
-	if r == nil {
+	if r == "" {
 		return true, err
 	}
 
@@ -274,6 +274,7 @@ func (db *DB) Unfollow(uid, otherid int) (bool, error) {
 	c.Do("HINCRBY", "user:"+strconv.Itoa(uid), "following", "-1")
 	c.Do("HINCRBY", "user:"+strconv.Itoa(otherid), "followers", "-1")
 	if _, err := c.Do("EXEC"); err != nil {
+		fmt.Printf("error in MULTI.\n")
 		return false, err
 	}
 
@@ -298,18 +299,22 @@ func (db *DB) PostStatus(uid int, message string) (int, error) {
 		return -1, nil
 	}
 
-	timer, err := c.Do("HGET", "status:"+strconv.Itoa(uid), "posted")
+	timer, err := c.Do("HGET", "status:"+sid, "posted")
 	if err != nil {
 		return -1, err
 	}
 
-	time, _ := redis.String(timer, nil)
+	time, _ := redis.Int(timer, nil)
 
 	if _, err := c.Do("ZADD", "timeline:"+strconv.Itoa(uid), time, sid); err != nil {
 		return -1, err
 	}
-
-	succ, err := syndicateStatus(strconv.Itoa(uid), sid, time, db.Get())
+	/*
+		arg1 := strconv.Atoi(sid)
+		arg2 := strconv.Atoid(time)
+	*/
+	succ, err := syndicateStatus(strconv.Itoa(uid), sid, strconv.Itoa(time),
+		db.Get())
 
 	if succ != true || err != nil {
 		return -1, err

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"testing"
 )
@@ -57,27 +56,54 @@ func TestFollow(t *testing.T) {
 	defer c.Close()
 
 	if res, err := db.Follow(54, 55); res == false || err != nil {
-		t.Error("error user 1 following user 2: ", uids[0], uids[1])
+		t.Error("error user 54 following user 55")
 	}
 	// double check it actually worked
-	if res, err := redis.Int(c.Do("ZSCORE", "followers:55", "54")); res == nil || err != nil {
+	if res, err := redis.String(c.Do("ZSCORE", "followers:55", "54")); res == "" || err != nil {
 		t.Error("followers not updated properly")
 	}
-	if res, err := redis.Int(c.Do("ZSCORE", "following:54", "55")); res == nil || err != nil {
+	if res, err := redis.String(c.Do("ZSCORE", "following:54", "55")); res == "" || err != nil {
 		t.Error("following not updated properly")
 	}
 
 	// test unfollow
-	if res, err := db.UnFollow(54, 55); res == false || err != nil {
+	if res, err := db.Unfollow(54, 55); res == false || err != nil {
 		t.Error("error unfollowing")
 	}
 
 	// check to see if worked
-	if _, err := c.Do("ZSCORE", "followers:55", "54"); err != nil {
+	if res, err := c.Do("ZSCORE", "followers:55", "54"); err != nil || res == nil {
 		t.Error("error checking to see if unfollowed")
 	}
 
-	if _, err := c.Do("ZSCORE", "following:54", "55"); err != nil {
+	if res, err := c.Do("ZSCORE", "following:54", "55"); err != nil || res == nil {
 		t.Error("error checking to see if unfollowing")
 	}
+}
+
+func TestPost(t *testing.T) {
+	db := NewDB("localhost:6379")
+	if db == nil {
+		t.Error("db is nil")
+	}
+	c := db.Get()
+	defer c.Close()
+
+	if res, err := db.Follow(-1, -2); res == false || err != nil {
+		t.Error("error user: -1 following user: -2")
+	}
+
+	sid, err := db.PostStatus(-2, "this is a post")
+	if sid == -1 || err != nil {
+		t.Error("error user: -2 posting status")
+	}
+
+	if res, err := redis.String(c.Do("ZSCORE", "timeline:-2", sid)); err != nil || res == "" {
+		t.Error("error checking user: -2 timeline")
+	}
+
+	if res, err := redis.String(c.Do("ZSCORE", "timeline:-1", sid)); err != nil || res == "" {
+		t.Error("error checking user: -1 timeline")
+	}
+
 }
