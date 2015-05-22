@@ -257,14 +257,14 @@ func (db *DB) Unfollow(uid, otherid int) (bool, error) {
 	fkey1 := "following:" + strconv.Itoa(otherid)
 	fkey2 := "followers:" + strconv.Itoa(uid)
 
-	r, err := redis.String(c.Do("ZSCORE", fkey1, strconv.Itoa(otherid)))
+	r, err := c.Do("ZSCORE", fkey1, strconv.Itoa(otherid))
 
 	if err != nil {
 		fmt.Printf("error checking to see if following.\n")
 		return false, err
 	}
 
-	if r == "" {
+	if r == nil {
 		return true, err
 	}
 
@@ -289,17 +289,16 @@ func (db *DB) PostStatus(uid int, message string) (int, error) {
 	}
 	defer c.Close()
 
-	idr, err := createStatus(message, uid, db.Get())
+	sid, err := createStatus(message, uid, db.Get())
 	if err != nil {
 		return -1, err
 	}
-	sid, _ := redis.String(idr, nil)
 
-	if sid == "-1" {
+	if sid == -1 {
 		return -1, nil
 	}
 
-	timer, err := c.Do("HGET", "status:"+sid, "posted")
+	timer, err := c.Do("HGET", "status:"+strconv.Itoa(sid), "posted")
 	if err != nil {
 		return -1, err
 	}
@@ -313,20 +312,14 @@ func (db *DB) PostStatus(uid int, message string) (int, error) {
 		arg1 := strconv.Atoi(sid)
 		arg2 := strconv.Atoid(time)
 	*/
-	succ, err := syndicateStatus(strconv.Itoa(uid), sid, strconv.Itoa(time),
+	succ, err := syndicateStatus(strconv.Itoa(uid), strconv.Itoa(sid), strconv.Itoa(time),
 		db.Get())
 
 	if succ != true || err != nil {
 		return -1, err
 	}
 
-	res, err := strconv.Atoi(sid)
-
-	if res == -1 || err != nil {
-		return -1, err
-	}
-
-	return strconv.Atoi(sid)
+	return sid, nil
 }
 
 func syndicateStatus(uid, sid, time string, c redis.Conn) (bool, error) {

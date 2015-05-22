@@ -68,7 +68,7 @@ func TestFollow(t *testing.T) {
 
 	// test unfollow
 	if res, err := db.Unfollow(54, 55); res == false || err != nil {
-		t.Error("error unfollowing")
+		t.Error("error unfollowing ", err)
 	}
 
 	// check to see if worked
@@ -89,21 +89,25 @@ func TestPost(t *testing.T) {
 	c := db.Get()
 	defer c.Close()
 
-	if res, err := db.Follow(-1, -2); res == false || err != nil {
-		t.Error("error user: -1 following user: -2")
+	if res, err := db.Follow(100, 101); res == false || err != nil {
+		t.Error("error user: 100 following user: 101")
 	}
 
-	sid, err := db.PostStatus(-2, "this is a post")
+	sid, err := db.PostStatus(101, "this is a post")
 	if sid == -1 || err != nil {
-		t.Error("error user: -2 posting status")
+		t.Error("error user: 101 posting status ", err)
 	}
 
-	if res, err := redis.String(c.Do("ZSCORE", "timeline:-2", sid)); err != nil || res == "" {
-		t.Error("error checking user: -2 timeline")
+	if res, err := redis.String(c.Do("ZSCORE", "timeline:101", sid)); err != nil || res == "" {
+		t.Error("error checking user: 101 timeline ", err)
 	}
 
-	if res, err := redis.String(c.Do("ZSCORE", "timeline:-1", sid)); err != nil || res == "" {
-		t.Error("error checking user: -1 timeline")
+	if res, err := redis.String(c.Do("ZSCORE", "timeline:100", sid)); err != nil || res == "" {
+		t.Error("error checking user: 100 timeline ", err)
+	}
+
+	if _, err := db.Unfollow(100, 101); err != nil {
+		t.Error("unable to unfollow ", err)
 	}
 
 }
