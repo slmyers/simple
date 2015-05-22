@@ -6,41 +6,6 @@ import (
 	"testing"
 )
 
-var uids []int
-
-/*
-*	use init to setupt test enviroment
- */
-func init() {
-	fmt.Printf("running init.\n")
-	uids := make([]int, 5)
-
-	db := NewDB("localhost:6379")
-	if db == nil {
-		fmt.Printf("db is nil in init.\n")
-	}
-
-	uid1, err := db.CreateUser("TestUser1", "scott")
-	if err != nil {
-		fmt.Printf("error creating TestUser1.\n")
-	}
-	uids[0] = uid1
-
-	uid2, err := db.CreateUser("TestUser2", "scotty")
-	if err != nil {
-		fmt.Printf("error creating TestUser1.\n")
-	}
-	uids[1] = uid2
-
-	uid3, err := db.CreateUser("TestUser3", "scotto")
-	if err != nil {
-		fmt.Printf("error creating TestUser1.\n")
-	}
-	uids[2] = uid3
-
-	fmt.Printf("uids = %v\n", uids)
-}
-
 func TestCreateUser(t *testing.T) {
 	db := NewDB("localhost:6379")
 	if db == nil {
