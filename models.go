@@ -19,7 +19,7 @@ type Status struct {
 }
 
 type Timeline struct {
-	Status []int `redis:"status"`
+	Posts []Status
 }
 
 type Follow struct {
@@ -32,5 +32,4 @@ type Follower struct {
 	User      int   `redis:"user"`
 }
 
-type Timeline []Status
 type Users []User

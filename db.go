@@ -72,7 +72,7 @@ func (db *DB) CreateUser(login, name string) (int, error) {
 	/* using pipeline mode */
 	c.Send("MULTI")
 	c.Send("HSET", "users:", login, id)
-	// set user:<login>:<id> => user:slmyers:1
+	// set user:<login>:<id> => user:1
 	c.Send("HMSET", "user:"+strconv.Itoa(id), "login", login,
 		"id", id, "name", name, "followers", "0", "following", "0",
 		"posts", "0", "signup", time.Now().Unix())
@@ -136,14 +136,9 @@ func (db *DB) GetUser(uid int) (*User, error) {
 /*
  * create status for user with string content
  */
-func (db *DB) CreateStatus(message string, uid int) (int, error) {
+func createStatus(message string, uid int, c redis.Conn) (int, error) {
 	var login string
 	var sid int
-	c := db.Get()
-	if c == nil {
-		fmt.Printf("db is nil\n")
-		return -1, nil
-	}
 	defer c.Close()
 
 	c.Do("MULTI")
@@ -180,6 +175,7 @@ func (db *DB) GetStatus(sid int) (*Status, error) {
 		fmt.Printf("db is nil\n")
 		return nil, nil
 	}
+	defer c.Close()
 
 	r, err := redis.Values(c.Do("HGETALL", "status:"+strconv.Itoa(sid)))
 
@@ -194,26 +190,162 @@ func (db *DB) GetStatus(sid int) (*Status, error) {
 	return &status, nil
 }
 
-func (db *DB) GetStatusMsg(uid, page, count int) (*Timeline, error) {
-	timeline = new(Timeline)
-	timeline.Status = make([]int, page)
-	timeLineIndex := 0
+func (db *DB) GetUserTimeline(uid, page, count int) (*Timeline, error) {
+	timeline := new(Timeline)
+	timeline.Posts = make([]Status, page)
+	//timeLineIndex := 0
+	statusID := make([]string, page)
 	c := db.Get()
 	if c == nil {
 		fmt.Printf("db is nil\n")
 		return nil, nil
 	}
+	defer c.Close()
 
-	r, err := redis.Values(c.Do("ZREVRANGE", "timeline:"+strconv.Itoa(uid),
+	r, _ := redis.Values(c.Do("ZREVRANGE", "timeline:"+strconv.Itoa(uid),
 		strconv.Itoa((page-1)*count), strconv.Itoa(page*(count-1))))
 
-	for i := 0; i < len(r); i += 2 {
-		timeline.Status[timeLineIndex], e = redis.Int(r[0], nil)
-		if e != nil {
-			return nil, e
+	for i := range r {
+		s, err := redis.Values(c.Do("HGETALL", "status:"+statusID[i]))
+		if err != nil {
+			return nil, err
 		}
-		timeLineIndex++
+		if err := redis.ScanStruct(s, timeline.Posts[i]); err != nil {
+			return nil, err
+		}
 	}
 
 	return timeline, nil
+}
+
+func (db *DB) Follow(uid, otherid int) (bool, error) {
+	fmt.Printf("follow here:\n")
+	c := db.Get()
+	if c == nil {
+		fmt.Printf("db is nil\n")
+		return false, nil
+	}
+	defer c.Close()
+
+	fkey1 := "following:" + strconv.Itoa(uid)
+	fkey2 := "followers:" + strconv.Itoa(otherid)
+
+	r, err := c.Do("ZSCORE", fkey1, strconv.Itoa(otherid))
+	if r != nil {
+		return true, err
+	}
+
+	c.Do("MULTI")
+	c.Do("ZADD", fkey1, time.Now().Unix(), strconv.Itoa(otherid))
+	c.Do("ZADD", fkey2, time.Now().Unix(), strconv.Itoa(uid))
+	c.Do("HINCRBY", "user:"+strconv.Itoa(uid), "following", "1")
+	c.Do("HINCRBY", "user:"+strconv.Itoa(otherid), "followers", 1)
+	if _, err := c.Do("EXEC"); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (db *DB) Unfollow(uid, otherid int) (bool, error) {
+	c := db.Get()
+	if c == nil {
+		fmt.Printf("db is nil\n")
+		return false, nil
+	}
+	defer c.Close()
+
+	fkey1 := "following:" + strconv.Itoa(uid)
+	fkey2 := "followers:" + strconv.Itoa(otherid)
+
+	r, err := c.Do("ZSCORE", fkey1, strconv.Itoa(otherid))
+
+	if err != nil {
+		return false, err
+	}
+
+	if r == nil {
+		return true, err
+	}
+
+	c.Do("MULTI")
+	c.Do("ZREM", fkey1, strconv.Itoa(otherid))
+	c.Do("ZREM", fkey2, strconv.Itoa(uid))
+	c.Do("HINCRBY", "user:"+strconv.Itoa(uid), "following", "-1")
+	c.Do("HINCRBY", "user:"+strconv.Itoa(otherid), "followers", "-1")
+	if _, err := c.Do("EXEC"); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (db *DB) PostStatus(uid int, message string) (int, error) {
+	c := db.Get()
+	if c == nil {
+		fmt.Printf("db is nil\n")
+		return -1, nil
+	}
+	defer c.Close()
+
+	idr, err := createStatus(message, uid, db.Get())
+	if err != nil {
+		return -1, err
+	}
+	sid, _ := redis.String(idr, nil)
+
+	if sid == "-1" {
+		return -1, nil
+	}
+
+	timer, err := c.Do("HGET", "status:"+strconv.Itoa(uid), "posted")
+	if err != nil {
+		return -1, err
+	}
+
+	time, _ := redis.String(timer, nil)
+
+	if _, err := c.Do("ZADD", "timeline:"+strconv.Itoa(uid), time, sid); err != nil {
+		return -1, err
+	}
+
+	succ, err := syndicateStatus(strconv.Itoa(uid), sid, time, db.Get())
+
+	if succ != true || err != nil {
+		return -1, err
+	}
+
+	res, err := strconv.Atoi(sid)
+
+	if res == -1 || err != nil {
+		return -1, err
+	}
+
+	return strconv.Atoi(sid)
+}
+
+func syndicateStatus(uid, sid, time string, c redis.Conn) (bool, error) {
+	defer c.Close()
+
+	r, err := redis.Values(c.Do("ZRANGEBYSCORE", "followers:"+uid, "-inf",
+		"+inf"))
+
+	if err != nil {
+		return false, err
+	}
+
+	var followerSlice []string
+	if err := redis.ScanSlice(r, &followerSlice); err != nil {
+		return false, nil
+	}
+	fmt.Printf("followerSlice = %v\n", followerSlice)
+
+	c.Do("MULTI")
+	for i := range followerSlice {
+		c.Do("ZADD", "timeline:"+followerSlice[i], time, sid)
+	}
+	if _, err := c.Do("EXEC"); err != nil {
+		return false, err
+	}
+	return true, nil
 }
