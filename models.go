@@ -1,4 +1,4 @@
-package main
+package db
 
 type User struct {
 	Login     string `redis:"login"`

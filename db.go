@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"fmt"
@@ -52,27 +52,20 @@ func (db *DB) CreateUser(login, name string) (int, error) {
 		return -1, nil
 	}
 	defer c.Close()
-	// check if users:<login> hash exists
-	existsr, err := c.Do("HEXISTS", "users:", login)
-	if err != nil {
-		return -1, err
-	}
-	exists, _ := redis.Int(existsr, nil)
-	if exists == 1 {
+	// check if username is taken
+	if exists, err := redis.Int(c.Do("HEXISTS", "users:", login)); err != nil || exists == 1 {
 		return -1, err
 	}
 
 	// increment global user count
-	idr, err := c.Do("INCR", "user:id")
+	id, err := redis.Int(c.Do("INCR", "user:id"))
 	if err != nil {
 		return -1, err
 	}
-	id, _ := redis.Int(idr, nil)
 
-	/* using pipeline mode */
+	// set the user hash
 	c.Send("MULTI")
 	c.Send("HSET", "users:", login, id)
-	// set user:<login>:<id> => user:1
 	c.Send("HMSET", "user:"+strconv.Itoa(id), "login", login,
 		"id", id, "name", name, "followers", "0", "following", "0",
 		"posts", "0", "signup", time.Now().Unix())
@@ -90,11 +83,10 @@ func (db *DB) DeleteUser(uid int) (bool, error) {
 	}
 	defer c.Close()
 
-	loginr, err := c.Do("HGET", "user:"+strconv.Itoa(uid), "login")
+	login, err := redis.String(c.Do("HGET", "user:"+strconv.Itoa(uid), "login"))
 	if err != nil {
 		return false, err
 	}
-	login, _ := redis.String(loginr, nil)
 	// user exists
 	if login != "" {
 		c.Do("MULTI")
@@ -303,10 +295,6 @@ func (db *DB) PostStatus(uid int, message string) (int, error) {
 	if _, err := c.Do("ZADD", "timeline:"+strconv.Itoa(uid), time, sid); err != nil {
 		return -1, err
 	}
-	/*
-		arg1 := strconv.Atoi(sid)
-		arg2 := strconv.Atoid(time)
-	*/
 	succ, err := syndicateStatus(strconv.Itoa(uid), strconv.Itoa(sid), strconv.Itoa(time),
 		db.Get())
 
