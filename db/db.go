@@ -1,4 +1,4 @@
-package db
+package myredisDB
 
 import (
 	"fmt"
