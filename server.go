@@ -17,6 +17,7 @@ func main() {
 
 	router, err := rest.MakeRouter(
 		rest.Post("/createuser", i.CreateUser),
+		rest.Post("/poststatus", i.PostStatus),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -56,13 +57,18 @@ func (i *Impl) CreateUser(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (i *Impl) PostStatus(w rest.ResponseWriter, r *rest.Request) {
-	var post Postpayload
-	if err := r.DecodeJsonPayload(&post); err != nil {
+	var status Statuspayload
+	if err := r.DecodeJsonPayload(&status); err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	uid, err := strconv.Atoi(status.Uid)
+	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	sid, err := i.DB.PostStatus(strconv.Atoi(post.uid), post.msg)
+	sid, err := i.DB.PostStatus(uid, status.Msg)
 
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
