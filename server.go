@@ -35,10 +35,20 @@ func (i *Impl) InitDB() {
 	}
 }
 
+type Userpayload struct {
+	Username string `json:"username"`
+	Name     string `json:"name"`
+}
+
 func (i *Impl) CreateUser(w rest.ResponseWriter, r *rest.Request) {
-	uid, err := i.DB.CreateUser("Test1", "testerino")
+	user := new(Userpayload)
+	err := r.DecodeJsonPayload(&user)
 	if err != nil {
-		log.Fatalf("error creating user: %v\n", err)
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	log.Printf("uid = %v\n", uid)
+	if uid, err := i.DB.CreateUser(user.Username, user.Name); uid != -1 || err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

@@ -247,11 +247,9 @@ func (db *DB) Unfollow(uid, otherid int) (bool, error) {
 	r, err := c.Do("ZSCORE", fkey1, strconv.Itoa(otherid))
 
 	if err != nil {
-		fmt.Printf("error checking to see if following.\n")
 		return false, err
 	}
 
-	fmt.Printf("inside unfollow r = %v\n", r)
 	if r == nil {
 		return true, err
 	}
@@ -262,10 +260,8 @@ func (db *DB) Unfollow(uid, otherid int) (bool, error) {
 	c.Do("HINCRBY", "user:"+strconv.Itoa(uid), "following", "-1")
 	c.Do("HINCRBY", "user:"+strconv.Itoa(otherid), "followers", "-1")
 	if _, err := c.Do("EXEC"); err != nil {
-		fmt.Printf("error in MULTI.\n")
 		return false, err
 	}
-
 	return true, nil
 }
 

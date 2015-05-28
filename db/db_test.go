@@ -1,7 +1,6 @@
 package myredisDB
 
 import (
-	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"testing"
 )
@@ -80,11 +79,11 @@ func TestFollow(t *testing.T) {
 	}
 
 	// check to see if worked
-	if res, err := c.Do("ZSCORE", "followers:-2", "-1"); err != nil || res == nil {
+	if res, err := c.Do("ZSCORE", "followers:-2", "-1"); err != nil || res != nil {
 		t.Error("error checking to see if unfollowed")
 	}
 
-	if res, err := c.Do("ZSCORE", "following:-1", "-2"); err != nil || res == nil {
+	if res, err := c.Do("ZSCORE", "following:-1", "-2"); err != nil || res != nil {
 		t.Error("error checking to see if unfollowing")
 	}
 }
@@ -108,25 +107,16 @@ func TestPost(t *testing.T) {
 		t.Error("error user: -2 posting status ", err)
 	}
 
-	res, err := redis.String(c.Do("ZSCORE", "timeline:-2", sid))
-
-	if err != nil {
+	if res, err := redis.String(c.Do("ZSCORE", "timeline:-2", sid)); err != nil || res == "" {
 		t.Error("error checking user: -2 timeline ", err)
 	}
-
-	fmt.Printf("res = %v\n", res)
 
 	if res, err := redis.String(c.Do("ZSCORE", "timeline:-1", sid)); err != nil || res == "" {
 		t.Error("error checking user: -1 timeline ", err)
 	}
 
-	res2, err := db.Unfollow(-1, -2)
-	/*
-		{
-			t.Error("unable to unfollow ", err)
-		}
-	*/
-	fmt.Printf("res for unfollow = %v\n", res2)
-
+	if _, err := db.Unfollow(-1, -2); err != nil {
+		t.Error("unable to unfollow ", err)
+	}
 	c.Do("SET", "status:id", oldSID)
 }
