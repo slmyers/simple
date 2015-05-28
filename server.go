@@ -5,6 +5,7 @@ import (
 	"github.com/slmyers/go-json-rest/rest"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func main() {
@@ -35,20 +36,25 @@ func (i *Impl) InitDB() {
 	}
 }
 
-type Userpayload struct {
-	Username string `json:"username"`
-	Name     string `json:"name"`
-}
-
 func (i *Impl) CreateUser(w rest.ResponseWriter, r *rest.Request) {
-	user := new(Userpayload)
+	var user Userpayload
 	err := r.DecodeJsonPayload(&user)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if uid, err := i.DB.CreateUser(user.Username, user.Name); uid != -1 || err != nil {
+	uid, err := i.DB.CreateUser(user.Username, user.Name)
+
+	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// server responds with uid of newly created user
+	// -1 if username already exists
+	w.WriteJson(map[string]string{"uid": strconv.Itoa(uid)})
+}
+
+func (i *Impl) PostStatus(w rest.ResponseWriter, r *rest.Request) {
+
 }
