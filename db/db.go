@@ -241,8 +241,8 @@ func (db *DB) Unfollow(uid, otherid int) (bool, error) {
 	}
 	defer c.Close()
 
-	fkey1 := "following:" + strconv.Itoa(otherid)
-	fkey2 := "followers:" + strconv.Itoa(uid)
+	fkey1 := "following:" + strconv.Itoa(uid)
+	fkey2 := "followers:" + strconv.Itoa(otherid)
 
 	r, err := c.Do("ZSCORE", fkey1, strconv.Itoa(otherid))
 
@@ -251,6 +251,7 @@ func (db *DB) Unfollow(uid, otherid int) (bool, error) {
 		return false, err
 	}
 
+	fmt.Printf("inside unfollow r = %v\n", r)
 	if r == nil {
 		return true, err
 	}
