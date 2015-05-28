@@ -56,5 +56,30 @@ func (i *Impl) CreateUser(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (i *Impl) PostStatus(w rest.ResponseWriter, r *rest.Request) {
+	var post Postpayload
+	if err := r.DecodeJsonPayload(&post); err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	sid, err := i.DB.PostStatus(strconv.Atoi(post.uid), post.msg)
+
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteJson(map[string]string{"sid": strconv.Itoa(sid)})
+}
+
+func (i *Impl) FollowUser(w rest.ResponseWriter, r *rest.Request) {
+
+}
+
+func (i *Impl) UnfollowUser(w rest.ResponseWriter, r *rest.Request) {
+
+}
+
+func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 
 }
