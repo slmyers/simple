@@ -2,6 +2,7 @@ package main
 
 import (
 	rdb "./db"
+	"fmt"
 	"github.com/slmyers/go-json-rest/rest"
 	"log"
 	"net/http"
@@ -75,7 +76,7 @@ func (i *Impl) PostStatus(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	w.WriteJson(map[string]int{"sid": sid})
+	w.WriteJson(map[string]int{"sid": sid, "uid": status.Uid})
 }
 
 func (i *Impl) FollowUser(w rest.ResponseWriter, r *rest.Request) {
@@ -129,28 +130,35 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	res, err := i.DB.GetUserTimeline(timeline.Uid, timeline.Page, 30)
-
+	log.Printf("res = %v\n", res)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	output := new(TimelineResponse)
-	output.Posts = make([]rdb.Status, 30)
+	output.Posts = make([]rdb.Status, len(res))
+	output.Uid = timeline.Uid
+	output.Page = timeline.Page
 	outputIndex := 0
 	// channel to send/recieve status structs
 	statuses := make(chan rdb.Status)
 
+	// debugging
+	count := 0
+
 	for pst := range res {
+		count++
 		// anon goroutine to get a status in timeline page
-		go func(post int) {
+		go func(post, count int) {
+			fmt.Printf("goroutine: %d\n", count)
 			status, err := i.DB.GetStatus(post)
 			if err != nil {
 				log.Printf("error getting post %d, %v\n", post, err)
 				return
 			}
 			statuses <- status
-		}(pst)
+		}(pst, count)
 	}
 
 	for outputIndex < len(res) {
@@ -158,6 +166,7 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 		case sts := <-statuses:
 			output.Posts[outputIndex] = sts
 			outputIndex++
+			fmt.Printf("outputindex = %d\n", outputIndex)
 		case <-time.After(time.Second * 1):
 			log.Printf("timeout getting timeline:%d page:%d\n", timeline.Uid,
 				timeline.Page)
