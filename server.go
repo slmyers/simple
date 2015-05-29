@@ -43,7 +43,7 @@ func (i *Impl) InitDB() {
 }
 
 func (i *Impl) CreateUser(w rest.ResponseWriter, r *rest.Request) {
-	var user Userpayload
+	var user UserPayload
 	err := r.DecodeJsonPayload(&user)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -62,7 +62,7 @@ func (i *Impl) CreateUser(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (i *Impl) PostStatus(w rest.ResponseWriter, r *rest.Request) {
-	var status Statuspayload
+	var status StatusPayload
 	if err := r.DecodeJsonPayload(&status); err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -79,7 +79,7 @@ func (i *Impl) PostStatus(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (i *Impl) FollowUser(w rest.ResponseWriter, r *rest.Request) {
-	var follow Followpayload
+	var follow FollowPayload
 	if err := r.DecodeJsonPayload(&follow); err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -92,12 +92,16 @@ func (i *Impl) FollowUser(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	w.WriteJson(map[string]string{"following": folllow.Otherid,
-		"follower": follow.Uid})
+	if res == true {
+		w.WriteJson(map[string]int{"following": follow.Otherid,
+			"follower": follow.Uid, "failure": 0})
+	} else {
+		w.WriteJson(map[string]int{"failure": 1})
+	}
 }
 
 func (i *Impl) UnfollowUser(w rest.ResponseWriter, r *rest.Request) {
-	var follow Followpayload
+	var follow FollowPayload
 	if err := r.DecodeJsonPayload(&follow); err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -110,12 +114,15 @@ func (i *Impl) UnfollowUser(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	w.WriteJson(map[string]string{"unfollowed": "true"})
-
+	if res == true {
+		w.WriteJson(map[string]string{"unfollowed": "true"})
+	} else {
+		w.WriteJson(map[string]string{"unfollowed": "false"})
+	}
 }
 
 func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
-	var timeline TimelineRequest
+	var timeline TimelinePayload
 	if err := r.DecodeJsonPayload(&timeline); err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -129,27 +136,27 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	output := new(TimelineResponse)
-	output.Posts = make([]Status, 30)
+	output.Posts = make([]rdb.Status, 30)
 	outputIndex := 0
 	// channel to send/recieve status structs
-	statuses := make(chan Status)
+	statuses := make(chan rdb.Status)
 
 	for pst := range res {
 		// anon goroutine to get a status in timeline page
 		go func(post int) {
-			Status, err := i.DB.GetStatus(post)
+			status, err := i.DB.GetStatus(post)
 			if err != nil {
 				log.Printf("error getting post %d, %v\n", post, err)
 				return
 			}
-			statuses <- Status
+			statuses <- status
 		}(pst)
 	}
 
 	for outputIndex < len(res) {
 		select {
 		case sts := <-statuses:
-			output.Post[outputIndex] = sts
+			output.Posts[outputIndex] = sts
 			outputIndex++
 		case <-time.After(time.Second * 1):
 			log.Printf("timeout getting timeline:%d page:%d\n", timeline.Uid,

@@ -1,5 +1,7 @@
 package main
 
+import "./db"
+
 type UserPayload struct {
 	Username string `json:"username"`
 	Name     string `json:"name"`
@@ -25,7 +27,7 @@ type UserinfoPayload struct {
 }
 
 type TimelineResponse struct {
-	Uid   int      `json:"uid"`
-	Page  int      `json:"page"`
-	Posts []Status `json:"posts"`
+	Uid   int                `json:"uid"`
+	Page  int                `json:"page"`
+	Posts []myredisDB.Status `json:"posts"`
 }

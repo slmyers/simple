@@ -160,26 +160,26 @@ func createStatus(message string, uid int, c redis.Conn) (int, error) {
 	return sid, nil
 }
 
-func (db *DB) GetStatus(sid int) (*Status, error) {
+func (db *DB) GetStatus(sid int) (Status, error) {
 	var status Status
 	c := db.Get()
 	if c == nil {
 		fmt.Printf("db is nil\n")
-		return nil, nil
+		return status, nil
 	}
 	defer c.Close()
 
 	r, err := redis.Values(c.Do("HGETALL", "status:"+strconv.Itoa(sid)))
 
 	if err != nil {
-		return nil, err
+		return status, err
 	}
 
 	if err := redis.ScanStruct(r, &status); err != nil {
-		return nil, err
+		return status, err
 	}
 
-	return &status, nil
+	return status, nil
 }
 
 func (db *DB) GetUserTimeline(uid, page, count int) ([]int, error) {
