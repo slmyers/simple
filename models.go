@@ -1,21 +1,31 @@
 package main
 
-type Userpayload struct {
+type UserPayload struct {
 	Username string `json:"username"`
 	Name     string `json:"name"`
 }
 
-type Statuspayload struct {
-	Uid string `json:"uid"`
+type StatusPayload struct {
+	Uid int    `json:"uid"`
 	Msg string `json:"msg"`
 }
 
-type Followpayload struct {
-	Uid     string `json:"uid"`
-	Otherid string `json:"otherid"`
+type FollowPayload struct {
+	Uid     int `json:"uid"`
+	Otherid int `json:"otherid"`
 }
 
-type Timelinepayload struct {
-	Uid  string `json:"uid"`
-	Page string `json:"page"`
+type TimelinePayload struct {
+	Uid  int `json:"uid"`
+	Page int `json:"page"`
+}
+
+type UserinfoPayload struct {
+	Uid int `json:"uid"`
+}
+
+type TimelineResponse struct {
+	Uid   int      `json:"uid"`
+	Page  int      `json:"page"`
+	Posts []Status `json:"posts"`
 }
