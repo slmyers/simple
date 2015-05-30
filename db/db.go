@@ -1,22 +1,31 @@
 package myredisDB
 
 import (
-	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"strconv"
 	"time"
 )
+
+/*******************************************
+************** Fields *********************/
 
 type DB struct {
 	// pool of redis connections
 	pool *redis.Pool
 }
 
+/********************************************
+************* Constructor ******************/
+
 func NewDB(server string) *DB {
 	db := new(DB)
+	// default port for redis server
 	db.pool = newPool("localhost:6379")
 	return db
 }
+
+/*********************************************
+************ Connection Code ****************/
 
 // init redis pool
 func newPool(server string) *redis.Pool {
@@ -42,15 +51,12 @@ func (db *DB) Get() redis.Conn {
 	return db.pool.Get()
 }
 
-/*
- * create user in redis layer
- */
+/********************************************
+***************  User code *****************/
+
 func (db *DB) CreateUser(login, name string) (int, error) {
+	// allocate a connection
 	c := db.Get()
-	if c == nil {
-		fmt.Printf("db is nil\n")
-		return -1, nil
-	}
 	defer c.Close()
 	// check if username is taken
 	if exists, err := redis.Int(c.Do("HEXISTS", "users:", login)); err != nil || exists == 1 {
@@ -78,9 +84,6 @@ func (db *DB) CreateUser(login, name string) (int, error) {
 
 func (db *DB) DeleteUser(uid int) (bool, error) {
 	c := db.Get()
-	if c == nil {
-		return false, nil
-	}
 	defer c.Close()
 
 	login, err := redis.String(c.Do("HGET", "user:"+strconv.Itoa(uid), "login"))
@@ -103,9 +106,6 @@ func (db *DB) DeleteUser(uid int) (bool, error) {
 func (db *DB) GetUser(uid int) (*User, error) {
 	var user User
 	c := db.Get()
-	if c == nil {
-		return nil, nil
-	}
 	defer c.Close()
 
 	r, err := redis.Values(c.Do("HGETALL", "user:"+strconv.Itoa(uid)))
@@ -158,10 +158,6 @@ func createStatus(message string, uid int, c redis.Conn) (int, error) {
 func (db *DB) GetStatus(sid int) (Status, error) {
 	var status Status
 	c := db.Get()
-	if c == nil {
-		fmt.Printf("db is nil\n")
-		return status, nil
-	}
 	defer c.Close()
 
 	r, err := redis.Values(c.Do("HGETALL", "status:"+strconv.Itoa(sid)))
@@ -180,10 +176,6 @@ func (db *DB) GetStatus(sid int) (Status, error) {
 func (db *DB) GetUserTimeline(uid, page, count int) ([]int, error) {
 	timeline := make([]int, page)
 	c := db.Get()
-	if c == nil {
-		fmt.Printf("db is nil\n")
-		return nil, nil
-	}
 	defer c.Close()
 
 	r, err := redis.Values(c.Do("ZREVRANGE", "timeline:"+strconv.Itoa(uid),
@@ -202,10 +194,6 @@ func (db *DB) GetUserTimeline(uid, page, count int) ([]int, error) {
 
 func (db *DB) Follow(uid, otherid int) (bool, error) {
 	c := db.Get()
-	if c == nil {
-		fmt.Printf("db is nil\n")
-		return false, nil
-	}
 	defer c.Close()
 
 	fkey1 := "following:" + strconv.Itoa(uid)
@@ -230,10 +218,6 @@ func (db *DB) Follow(uid, otherid int) (bool, error) {
 
 func (db *DB) Unfollow(uid, otherid int) (bool, error) {
 	c := db.Get()
-	if c == nil {
-		fmt.Printf("db is nil\n")
-		return false, nil
-	}
 	defer c.Close()
 
 	fkey1 := "following:" + strconv.Itoa(uid)
@@ -262,10 +246,6 @@ func (db *DB) Unfollow(uid, otherid int) (bool, error) {
 
 func (db *DB) PostStatus(uid int, message string) (int, error) {
 	c := db.Get()
-	if c == nil {
-		fmt.Printf("db is nil\n")
-		return -1, nil
-	}
 	defer c.Close()
 
 	sid, err := createStatus(message, uid, db.Get())
