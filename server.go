@@ -80,13 +80,24 @@ func (i *Impl) PostStatus(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (i *Impl) FollowUser(w rest.ResponseWriter, r *rest.Request) {
-	var follow FollowPayload
-	if err := r.DecodeJsonPayload(&follow); err != nil {
+	v, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	res, err := i.DB.Follow(follow.Uid, follow.Otherid)
+	uid, err := strconv.Atoi(v.Get("uid"))
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	otherId, err := strconv.Atoi(v.Get("otherId"))
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res, err := i.DB.Follow(uid, otherId)
 
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -94,21 +105,33 @@ func (i *Impl) FollowUser(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	if res == true {
-		w.WriteJson(map[string]int{"following": follow.Otherid,
-			"follower": follow.Uid, "failure": 0})
+		w.WriteJson(map[string]string{"following": v.Get("otherId"),
+			"follower": v.Get("uid"), "followed": "true"})
 	} else {
-		w.WriteJson(map[string]int{"failure": 1})
+		w.WriteJson(map[string]string{"following": v.Get("otherId"),
+			"follower": v.Get("uid"), "followed": "false"})
 	}
 }
 
 func (i *Impl) UnfollowUser(w rest.ResponseWriter, r *rest.Request) {
-	var follow FollowPayload
-	if err := r.DecodeJsonPayload(&follow); err != nil {
+	v, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	res, err := i.DB.Unfollow(follow.Uid, follow.Otherid)
+	uid, err := strconv.Atoi(v.Get("uid"))
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	otherId, err := strconv.Atoi(v.Get("otherId"))
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res, err := i.DB.Unfollow(uid, otherId)
 
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -116,9 +139,11 @@ func (i *Impl) UnfollowUser(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	if res == true {
-		w.WriteJson(map[string]string{"unfollowed": "true"})
+		w.WriteJson(map[string]string{"following": v.Get("otherId"),
+			"follower": v.Get("uid"), "unfollowed": "true"})
 	} else {
-		w.WriteJson(map[string]string{"unfollowed": "false"})
+		w.WriteJson(map[string]string{"following": v.Get("otherId"),
+			"follower": v.Get("uid"), "unfollowed": "false"})
 	}
 }
 
@@ -153,8 +178,10 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 	outputIndex := 0
 	// channel to send/recieve status structs
 	statuses := make(chan rdb.Status)
-
-	for pst := range res {
+	var pst int
+	for j := 0; j < len(res); j++ {
+		pst = res[j]
+		log.Printf("pst = %v\n", pst)
 		// anon goroutine to get a status in timeline page
 		go func(post int) {
 			status, err := i.DB.GetStatus(post)
@@ -171,14 +198,17 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 		case sts := <-statuses:
 			output.Posts[outputIndex] = sts
 			outputIndex++
+			log.Printf("sid = %v\n", sts.Id)
 		case <-time.After(time.Second * 1):
 			log.Printf("timeout getting timeline:%d page:%d\n", uid,
 				page)
 			break
 		}
 	}
+
 	w.WriteJson(&output)
 }
 
 func (i *Impl) GetUser(w rest.ResponseWriter, r *rest.Request) {
+
 }
