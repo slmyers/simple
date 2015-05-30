@@ -277,12 +277,11 @@ func (db *DB) PostStatus(uid int, message string) (int, error) {
 		return -1, nil
 	}
 
-	timer, err := c.Do("HGET", "status:"+strconv.Itoa(sid), "posted")
+	time, err := redis.Int(c.Do("HGET", "status:"+strconv.Itoa(sid), "posted"))
+
 	if err != nil {
 		return -1, err
 	}
-
-	time, _ := redis.Int(timer, nil)
 
 	if _, err := c.Do("ZADD", "timeline:"+strconv.Itoa(uid), time, sid); err != nil {
 		return -1, err
