@@ -89,15 +89,10 @@ func (db *DB) DeleteUser(uid int) (bool, error) {
 	}
 	// user exists
 	if login != "" {
+
 		c.Do("MULTI")
 		c.Do("HDEL", "users:", login)
-		c.Do("HDEL", "user:"+strconv.Itoa(uid), "login")
-		c.Do("HDEL", "user:"+strconv.Itoa(uid), "id")
-		c.Do("HDEL", "user:"+strconv.Itoa(uid), "name")
-		c.Do("HDEL", "user:"+strconv.Itoa(uid), "followers")
-		c.Do("HDEL", "user:"+strconv.Itoa(uid), "following")
-		c.Do("HDEL", "user:"+strconv.Itoa(uid), "posts")
-		c.Do("HDEL", "user:"+strconv.Itoa(uid), "signup")
+		c.Do("DEL", "user:"+strconv.Itoa(uid))
 		if _, err := c.Do("EXEC"); err != nil {
 			return false, err
 		}
