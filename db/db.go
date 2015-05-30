@@ -22,7 +22,7 @@ func NewDB(server string) *DB {
 func newPool(server string) *redis.Pool {
 	return &redis.Pool{
 		MaxIdle:     10,
-		IdleTimeout: 240 & time.Second,
+		IdleTimeout: 240 * time.Second,
 		MaxActive:   1000, // limit to 1000 active users
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", server)
