@@ -8,5 +8,5 @@ need redigo to run:
 user this command to build
 `go build server.go models.go`
 
-### in progress
-
+### functional
+needs some formal testing
