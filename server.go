@@ -2,10 +2,10 @@ package main
 
 import (
 	rdb "./db"
-	"fmt"
 	"github.com/slmyers/go-json-rest/rest"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -123,14 +123,24 @@ func (i *Impl) UnfollowUser(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
-	var timeline TimelinePayload
-	if err := r.DecodeJsonPayload(&timeline); err != nil {
+	v, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	res, err := i.DB.GetUserTimeline(timeline.Uid, timeline.Page, 30)
-	log.Printf("res = %v\n", res)
+	uid, err := strconv.Atoi(v.Get("uid"))
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	page, err := strconv.Atoi(v.Get("page"))
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res, err := i.DB.GetUserTimeline(uid, page, 30)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -138,27 +148,22 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 
 	output := new(TimelineResponse)
 	output.Posts = make([]rdb.Status, len(res))
-	output.Uid = timeline.Uid
-	output.Page = timeline.Page
+	output.Uid = uid
+	output.Page = page
 	outputIndex := 0
 	// channel to send/recieve status structs
 	statuses := make(chan rdb.Status)
 
-	// debugging
-	count := 0
-
 	for pst := range res {
-		count++
 		// anon goroutine to get a status in timeline page
-		go func(post, count int) {
-			fmt.Printf("goroutine: %d\n", count)
+		go func(post int) {
 			status, err := i.DB.GetStatus(post)
 			if err != nil {
 				log.Printf("error getting post %d, %v\n", post, err)
 				return
 			}
 			statuses <- status
-		}(pst, count)
+		}(pst)
 	}
 
 	for outputIndex < len(res) {
@@ -166,10 +171,9 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 		case sts := <-statuses:
 			output.Posts[outputIndex] = sts
 			outputIndex++
-			fmt.Printf("outputindex = %d\n", outputIndex)
 		case <-time.After(time.Second * 1):
-			log.Printf("timeout getting timeline:%d page:%d\n", timeline.Uid,
-				timeline.Page)
+			log.Printf("timeout getting timeline:%d page:%d\n", uid,
+				page)
 			break
 		}
 	}
@@ -177,5 +181,4 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (i *Impl) GetUser(w rest.ResponseWriter, r *rest.Request) {
-
 }
