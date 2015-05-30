@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -181,7 +182,6 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 	var pst int
 	for j := 0; j < len(res); j++ {
 		pst = res[j]
-		log.Printf("pst = %v\n", pst)
 		// anon goroutine to get a status in timeline page
 		go func(post int) {
 			status, err := i.DB.GetStatus(post)
@@ -198,14 +198,13 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 		case sts := <-statuses:
 			output.Posts[outputIndex] = sts
 			outputIndex++
-			log.Printf("sid = %v\n", sts.Id)
 		case <-time.After(time.Second * 1):
 			log.Printf("timeout getting timeline:%d page:%d\n", uid,
 				page)
 			break
 		}
 	}
-
+	sort.Sort(output.Posts)
 	w.WriteJson(&output)
 }
 
