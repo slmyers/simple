@@ -209,5 +209,23 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (i *Impl) GetUser(w rest.ResponseWriter, r *rest.Request) {
+	v, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	uid, err := strconv.Atoi(v.Get("uid"))
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	usr, err := i.DB.GetUser(uid)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteJson(&usr)
 }
