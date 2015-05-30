@@ -64,9 +64,9 @@ func (db *DB) CreateUser(login, name string) (int, error) {
 	}
 
 	// set the user hash
-	c.Send("MULTI")
-	c.Send("HSET", "users:", login, id)
-	c.Send("HMSET", "user:"+strconv.Itoa(id), "login", login,
+	c.Do("MULTI")
+	c.Do("HSET", "users:", login, id)
+	c.Do("HMSET", "user:"+strconv.Itoa(id), "login", login,
 		"id", id, "name", name, "followers", "0", "following", "0",
 		"posts", "0", "signup", time.Now().Unix())
 	if _, err := c.Do("EXEC"); err != nil {
