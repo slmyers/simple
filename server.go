@@ -44,6 +44,19 @@ func (i *Impl) InitDB() {
 	}
 }
 
+/*
+ *	consumes JSON of the form:
+ *	{
+ *		"username":	"<username>",
+ *		"name":	"<users' name>"
+ *	}
+ *
+ *
+ *
+ *
+ *
+ */
+
 func (i *Impl) CreateUser(w rest.ResponseWriter, r *rest.Request) {
 	var user UserPayload
 	err := r.DecodeJsonPayload(&user)
@@ -51,18 +64,37 @@ func (i *Impl) CreateUser(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// returns -1 if username is unable to be registered, ie, already taken
 	uid, err := i.DB.CreateUser(user.Username, user.Name)
-
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// server responds with uid of newly created user
-	// -1 if username already exists
-	w.WriteJson(map[string]string{"uid": strconv.Itoa(uid)})
+	if uid == -1 {
+		w.WriteJson(map[string]string{
+			"uid":  strconv.Itoa(uid),
+			"user": "unable to create",
+		})
+		return
+	}
+
+	user, err := i.DB.GetUser(uid)
+
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteJson(&user)
 }
 
+/*
+ * consumes JSON of the form
+   {
+		"uid": <user id>
+		"msg": <text string containing message>
+   }
+*/
 func (i *Impl) PostStatus(w rest.ResponseWriter, r *rest.Request) {
 	var status StatusPayload
 	if err := r.DecodeJsonPayload(&status); err != nil {
@@ -77,7 +109,13 @@ func (i *Impl) PostStatus(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	w.WriteJson(map[string]int{"sid": sid, "uid": status.Uid})
+	post, err := i.DB.GetStatus(status.Uid)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteJson(&post)
 }
 
 func (i *Impl) FollowUser(w rest.ResponseWriter, r *rest.Request) {
