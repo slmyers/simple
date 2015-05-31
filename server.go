@@ -19,8 +19,8 @@ func main() {
 	api.Use(rest.DefaultDevStack...)
 
 	router, err := rest.MakeRouter(
-		rest.Post("/createuser", i.CreateUser),
-		rest.Post("/poststatus", i.PostStatus),
+		rest.Post("/user", i.CreateUser),
+		rest.Post("/status", i.PostStatus),
 		rest.Post("/follow", i.FollowUser),
 		rest.Post("/unfollow", i.UnfollowUser),
 		rest.Get("/timeline", i.GetTimeline),
