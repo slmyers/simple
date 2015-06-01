@@ -1,5 +1,5 @@
 # simple
-simple social media app backend powered by redis written in go
+simple social media app backend using redis written in go
 
 need redigo to run:
 `go get github.com/garyburd/redigo/redis`
