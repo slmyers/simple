@@ -20,6 +20,8 @@ type TimelineResponse struct {
 
 type Statuses []myredisDB.Status
 
-func (s Statuses) Len() int           { return len(s) }
-func (s Statuses) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s Statuses) Less(i, j int) bool { return s[i].Posted < s[j].Posted }
+func (s Statuses) Len() int      { return len(s) }
+func (s Statuses) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+// we want the "larger" time to be first in sorting order
+func (s Statuses) Less(i, j int) bool { return s[i].Posted > s[j].Posted }

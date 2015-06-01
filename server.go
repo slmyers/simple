@@ -50,11 +50,6 @@ func (i *Impl) InitDB() {
  *		"username":	"<username>",
  *		"name":	"<users' name>"
  *	}
- *
- *
- *
- *
- *
  */
 
 func (i *Impl) CreateUser(w rest.ResponseWriter, r *rest.Request) {
@@ -118,6 +113,9 @@ func (i *Impl) PostStatus(w rest.ResponseWriter, r *rest.Request) {
 	w.WriteJson(&post)
 }
 
+/*
+ * handles requests of form /follow?uid=2&otherId=3
+ */
 func (i *Impl) FollowUser(w rest.ResponseWriter, r *rest.Request) {
 	v, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
@@ -152,6 +150,10 @@ func (i *Impl) FollowUser(w rest.ResponseWriter, r *rest.Request) {
 	}
 }
 
+/*
+ * handles requests of form /unfollow?uid=2&otherId=3
+ */
+
 func (i *Impl) UnfollowUser(w rest.ResponseWriter, r *rest.Request) {
 	v, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
@@ -185,6 +187,10 @@ func (i *Impl) UnfollowUser(w rest.ResponseWriter, r *rest.Request) {
 			"follower": v.Get("uid"), "unfollowed": "false"})
 	}
 }
+
+/*
+ * handles requests of the form /timeline?uid=7&page=1
+ */
 
 func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 	v, err := url.ParseQuery(r.URL.RawQuery)
@@ -245,6 +251,10 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 	sort.Sort(output.Posts)
 	w.WriteJson(&output)
 }
+
+/*
+ * handles requests of the form /user?uid=7
+ */
 
 func (i *Impl) GetUser(w rest.ResponseWriter, r *rest.Request) {
 	v, err := url.ParseQuery(r.URL.RawQuery)
