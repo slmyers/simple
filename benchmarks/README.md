@@ -2,9 +2,9 @@
 
 I'm using the [Apache HTTP server benchmarking tool](http://httpd.apache.org/docs/2.0/programs/ab.html) to benchmark the server. The server was run on my local machine.
 
-### machine specs 
+### machine specs
 12GB RAM
-8x2.67Ghz processor
+4x2.67Ghz processor
 
 ### get user summary 
 `ab -c 100 -n 100 http://127.0.0.1:8000/user?uid=7`
