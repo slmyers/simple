@@ -14,12 +14,15 @@ use this command to build
 
 # examples with output
 
->curl -i \
--H 'Content-Type: application/json' \
--X POST -d '{"username": "slmyers", "name": "Steven Myers"}' \
-http://127.0.0.1:8000/user
-HTTP/1.1 200 OK
+curl -i \
 
+-H 'Content-Type: application/json' \
+
+-X POST -d '{"username": "slmyers", "name": "Steven Myers"}' \
+
+http://127.0.0.1:8000/user
+
+HTTP/1.1 200 OK
 Content-Type: application/json
 X-Powered-By: go-json-rest
 Date: Mon, 01 Jun 2015 18:35:28 GMT
