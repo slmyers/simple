@@ -79,13 +79,13 @@ func (i *Impl) CreateUser(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	user, err := i.DB.GetUser(uid)
+	userOut, err := i.DB.GetUser(uid)
 
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteJson(&user)
+	w.WriteJson(&userOut)
 }
 
 /*
@@ -109,7 +109,7 @@ func (i *Impl) PostStatus(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	post, err := i.DB.GetStatus(status.Uid)
+	post, err := i.DB.GetStatus(sid)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
