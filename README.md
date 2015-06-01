@@ -1,3 +1,5 @@
+# CURRENTLY UNTESTED
+
 # simple
 api for simple social media app backed by redis written in go
 
@@ -8,5 +10,3 @@ need redigo to run:
 user this command to build
 `go build server.go models.go`
 
-### functional
-needs some formal testing
