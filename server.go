@@ -29,12 +29,18 @@ func main() {
 		rest.Post("/unfollow", i.UnfollowUser),
 		rest.Get("/timeline", i.GetTimeline),
 		rest.Get("/user", i.GetUser),
+		rest.Get("/", homeHandler),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 	api.SetApp(router)
 	log.Fatal(http.ListenAndServe(":8000", api.MakeHandler()))
+}
+
+func homeHandler(w rest.ResponseWriter, r *rest.Request) {
+	http.ServeFile(w.(http.ResponseWriter), r.Request,
+		r.URL.Path[1:])
 }
 
 type Impl struct {
