@@ -1,5 +1,9 @@
 package main
 
+/*
+ * backend for simple social network
+ */
+
 import (
 	rdb "./db"
 	"github.com/slmyers/go-json-rest/rest"
@@ -248,6 +252,9 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 			break
 		}
 	}
+	// because the statuses were retrieved concurrently we can't be sure
+	// of what order they will appear in output.Posts, so we must sort them
+	// if we want them to appear from newest to oldest
 	sort.Sort(output.Posts)
 	w.WriteJson(&output)
 }
