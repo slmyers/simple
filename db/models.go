@@ -11,9 +11,9 @@ type User struct {
 }
 
 type Status struct {
-	Message string `redis:"message"`
-	Posted  int64  `redis:"posted"`
-	Id      int    `redis:"id"`
-	Uid     int    `redis:"uid"`
-	Login   string `redis:"login"`
+	Message string `redis:"message" json:"message"`
+	Posted  int64  `redis:"posted" json:"posted"`
+	Id      int    `redis:"id" json:"id"`
+	Uid     int    `redis:"uid" json:"uid"`
+	Login   string `redis:"login" json:"login"`
 }
