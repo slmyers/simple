@@ -40,7 +40,7 @@ func main() {
 
 func homeHandler(w rest.ResponseWriter, r *rest.Request) {
 	http.ServeFile(w.(http.ResponseWriter), r.Request,
-		r.URL.Path[1:])
+		"index.html")
 }
 
 type Impl struct {
