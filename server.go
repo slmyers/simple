@@ -29,6 +29,7 @@ func main() {
 		rest.Post("/unfollow", i.UnfollowUser),
 		rest.Get("/timeline", i.GetTimeline),
 		rest.Get("/user", i.GetUser),
+		// handler for serving html file
 		rest.Get("/", homeHandler),
 	)
 	if err != nil {
@@ -38,9 +39,10 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8000", api.MakeHandler()))
 }
 
+/* we include this handler so that it is possible to provide a front end */
 func homeHandler(w rest.ResponseWriter, r *rest.Request) {
 	http.ServeFile(w.(http.ResponseWriter), r.Request,
-		"index.html")
+		r.URL.Path[1:])
 }
 
 type Impl struct {
@@ -237,16 +239,19 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 	for j := 0; j < len(res); j++ {
 		pst = res[j]
 		// anon goroutine to get a status in timeline page
+		// this means that all statuses are fetched concurrently
 		go func(post int) {
 			status, err := i.DB.GetStatus(post)
 			if err != nil {
 				log.Printf("error getting post %d, %v\n", post, err)
 				return
 			}
+			// pipe the fetched status into the channel previously made
 			statuses <- status
 		}(pst)
 	}
 
+	// this code is blocking
 	for outputIndex < len(res) {
 		select {
 		case sts := <-statuses:
