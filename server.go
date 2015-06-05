@@ -22,6 +22,7 @@ func main() {
 	api := rest.NewApi()
 	api.Use(rest.DefaultDevStack...)
 
+	// declare the handlers for various requests
 	router, err := rest.MakeRouter(
 		rest.Post("/user", i.CreateUser),
 		rest.Post("/status", i.PostStatus),
