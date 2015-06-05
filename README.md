@@ -82,7 +82,7 @@ Content-Length: 63
 
 ### unfollow user
 ```
-curl -i -X POST "http://127.0.0.1:8000/unfollow?uid=1otherId=7"
+curl -i -X POST "http://127.0.0.1:8000/unfollow?uid=1&otherId=7"
 ```
 
 ```
