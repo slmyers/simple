@@ -68,30 +68,3 @@ Percentage of the requests served within a certain time (ms)
   99%     22
  100%     22 (longest request)
 ```
-
-# note: I'm not sure how to benchmark the following
-
-
-### create user summary
-`ab -c 1 -n 1 -p user.json -T 'application/json' http://127.0.0.1:8000/user`
-
-```
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.0      0       0
-Processing:     1    1   0.0      1       1
-Waiting:        1    1   0.0      1       1
-Total:          1    1   0.0      1       1
-```
-
-### post status summary 
-`ab -c 1 -n 1 -p post.json -T 'application/json' http://127.0.0.1:8000/status`
-
-```
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.0      0       0
-Processing:     1    1   0.0      1       1
-Waiting:        1    1   0.0      1       1
-Total:          1    1   0.0      1       1
-```
