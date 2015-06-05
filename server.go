@@ -29,8 +29,8 @@ func main() {
 		rest.Post("/unfollow", i.UnfollowUser),
 		rest.Get("/timeline", i.GetTimeline),
 		rest.Get("/user", i.GetUser),
-		// handler for serving html file
-		rest.Get("/", homeHandler),
+		// uncomment if you would also like to serve files
+		//rest.Get("/", homeHandler),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -39,7 +39,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8000", api.MakeHandler()))
 }
 
-/* we include this handler so that it is possible to provide a front end */
+/* this is included as an example of how to serve files (webpages)*/
 func homeHandler(w rest.ResponseWriter, r *rest.Request) {
 	http.ServeFile(w.(http.ResponseWriter), r.Request,
 		r.URL.Path[1:])
