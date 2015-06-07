@@ -236,6 +236,7 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 	outputIndex := 0
 	// channel to send/recieve status structs
 	statuses := make(chan rdb.Status)
+	defer close(statuses)
 	var pst int
 	for j := 0; j < len(res); j++ {
 		pst = res[j]
