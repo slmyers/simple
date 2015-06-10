@@ -10,6 +10,10 @@ http://redis.io/
 use this command to build
 `go build server.go models.go`
 
+featured on my blog:
+
+http://slmyers.github.io/simple/social/network/2015/05/29/Simple-Social-Network/
+
 # examples with output
 
 ### create user
