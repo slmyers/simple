@@ -254,6 +254,7 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	// this code is blocking
+Loop:
 	for outputIndex < len(res) {
 		select {
 		case sts := <-statuses:
@@ -262,7 +263,7 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 		case <-time.After(time.Second * 1):
 			log.Printf("timeout getting timeline:%d page:%d\n", uid,
 				page)
-			break
+			break Loop
 		}
 	}
 	// because the statuses were retrieved concurrently we can't be sure
