@@ -6,19 +6,30 @@ package main
 
 import (
 	rdb "./db"
+	"flag"
+	"fmt"
 	"github.com/slmyers/go-json-rest/rest"
 	"log"
 	"net/http"
 	"net/url"
+	"runtime"
 	"sort"
 	"strconv"
 	"time"
 )
 
+var (
+	port = flag.String("port", "8000", "port bound to server")
+)
+
+func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+}
+
 func main() {
 	i := Impl{}
 	i.InitDB()
-
+	flag.Parse()
 	api := rest.NewApi()
 	api.Use(rest.DefaultDevStack...)
 
@@ -30,6 +41,7 @@ func main() {
 		rest.Post("/unfollow", i.UnfollowUser),
 		rest.Get("/timeline", i.GetTimeline),
 		rest.Get("/user", i.GetUser),
+		rest.Get("/userlogin", i.GetUserLogin),
 		// uncomment if you would also like to serve files
 		//rest.Get("/", homeHandler),
 	)
@@ -37,7 +49,8 @@ func main() {
 		log.Fatal(err)
 	}
 	api.SetApp(router)
-	log.Fatal(http.ListenAndServe(":8000", api.MakeHandler()))
+	fmt.Printf("serving on http://localhost:%s\n", *port)
+	log.Fatal(http.ListenAndServe(":"+*port, api.MakeHandler()))
 }
 
 /* this is included as an example of how to serve files (webpages)*/
@@ -291,6 +304,28 @@ func (i *Impl) GetUser(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	usr, err := i.DB.GetUser(uid)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteJson(&usr)
+}
+
+func (i *Impl) GetUserLogin(w rest.ResponseWriter, r *rest.Request) {
+	v, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	login := v.Get("login")
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	usr, err := i.DB.GetUserByLogin(login)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return

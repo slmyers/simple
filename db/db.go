@@ -32,7 +32,7 @@ func newPool(server string) *redis.Pool {
 	return &redis.Pool{
 		MaxIdle:     10,
 		IdleTimeout: 240 * time.Second,
-		MaxActive:   1000, // limit to 1000 active users
+		MaxActive:   10000, // limit to 10000 active users
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", server)
 			if err != nil {
@@ -110,6 +110,32 @@ func (db *DB) GetUser(uid int) (*User, error) {
 	var user User
 	c := db.Get()
 	defer c.Close()
+
+	r, err := redis.Values(c.Do("HGETALL", "user:"+strconv.Itoa(uid)))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := redis.ScanStruct(r, &user); err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (db *DB) GetUserByLogin(login string) (*User, error) {
+	var user User
+	c := db.Get()
+	defer c.Close()
+
+	uid, err := redis.Int(c.Do("HGET", "users:", login))
+	if err != nil {
+		return nil, err
+	}
+
+	if uid == 0 {
+		return nil, nil
+	}
 
 	r, err := redis.Values(c.Do("HGETALL", "user:"+strconv.Itoa(uid)))
 	if err != nil {

@@ -167,3 +167,61 @@ func TestPost(t *testing.T) {
 
 	c.Do("SET", "status:id", oldSID)
 }
+
+// test getting a user by login
+func TestGetUser(t *testing.T) {
+	db := NewDB("localhost:6379")
+	if db == nil {
+		t.Error("db is nil")
+	}
+	c := db.Get()
+	defer c.Close()
+
+	// save the original global user count
+	oldGlobalID, err := redis.String(c.Do("GET", "user:id"))
+	// create a test user using the API
+	uid, err := db.CreateUser("TestUser", "testy")
+
+	if err != nil {
+		t.Error("recieved error while creating user: ", err)
+	}
+	// -1 uid indicates that the user was not created
+	if uid == -1 {
+		t.Errorf("new user not created. uid: %v\n", uid)
+	}
+
+	user, err := db.GetUserByLogin("TestUser")
+	if err != nil {
+		t.Errorf("error getting user by login: ", err)
+	}
+
+	if user == nil {
+		t.Errorf("getting user by login returned nil")
+	}
+
+	if user.Login != "TestUser" {
+		t.Errorf("expected user login \"TestUser\" got: ", user.Login)
+	}
+
+	if user.Id != uid {
+		t.Errorf("expected user id %v got: ", uid, user.Id)
+	}
+
+	if user.Name != "testy" {
+		t.Errorf("expected user name \"testy\" got: ", user.Name)
+	}
+
+	if user.Followers != 0 {
+		t.Errorf("expected 0 followers got: ", user.Followers)
+	}
+
+	if user.Following != 0 {
+		t.Errorf("expected 0 following got: ", user.Following)
+	}
+
+	if user.Posts != 0 {
+		t.Errorf("expected 0 posts got: ", user.Posts)
+	}
+	db.DeleteUser(uid)
+	c.Do("SET", "user:id", oldGlobalID)
+}
