@@ -35,13 +35,12 @@ func main() {
 
 	// declare the handlers for various requests
 	router, err := rest.MakeRouter(
-		rest.Post("/user", i.CreateUser),
+		rest.Post("/users", i.CreateUser),
 		rest.Post("/status", i.PostStatus),
 		rest.Post("/follow", i.FollowUser),
 		rest.Post("/unfollow", i.UnfollowUser),
 		rest.Get("/timeline", i.GetTimeline),
-		rest.Get("/user", i.GetUser),
-		rest.Get("/userlogin", i.GetUserLogin),
+		rest.Get("/users", i.GetUser),
 		// uncomment if you would also like to serve files
 		//rest.Get("/", homeHandler),
 	)
@@ -248,7 +247,7 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 	output.Page = page
 	outputIndex := 0
 	// channel to send/recieve status structs
-	statuses := make(chan rdb.Status)
+	statuses := make(chan rdb.Status, len(res))
 	defer close(statuses)
 	var pst int
 	for j := 0; j < len(res); j++ {
@@ -296,40 +295,30 @@ func (i *Impl) GetUser(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	uid, err := strconv.Atoi(v.Get("uid"))
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
+	if uid, ok := v["uid"]; ok {
+		id, _ := strconv.Atoi(uid[0])
+		usr, err := i.DB.GetUser(id)
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		res := make(rdb.Users, 1)
+		res[0] = *usr
+		w.WriteJson(&res)
+		return
+	} else if login, ok := v["login"]; ok {
+		usr, err := i.DB.GetUserByLogin(login[0])
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		res := make(rdb.Users, 1)
+		res[0] = *usr
+		// http://dukex.svbtle.com/tip-golang-with-emberjs-json-response
+		w.WriteJson(map[string]interface{}{"user": res})
+		return
+	} else {
+		rest.NotFound(w, r)
 		return
 	}
-
-	usr, err := i.DB.GetUser(uid)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteJson(&usr)
-}
-
-func (i *Impl) GetUserLogin(w rest.ResponseWriter, r *rest.Request) {
-	v, err := url.ParseQuery(r.URL.RawQuery)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	login := v.Get("login")
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	usr, err := i.DB.GetUserByLogin(login)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteJson(&usr)
 }

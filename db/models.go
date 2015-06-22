@@ -17,3 +17,5 @@ type Status struct {
 	Uid     int    `redis:"uid" json:"uid"`
 	Login   string `redis:"login" json:"login"`
 }
+
+type Users []User
