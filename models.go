@@ -13,7 +13,7 @@ type StatusPayload struct {
 }
 
 type TimelineResponse struct {
-	Uid   int      `json:"uid"`
+	Uid   int      `json:"id"`
 	Page  int      `json:"page"`
 	Posts Statuses `json:"posts"`
 }

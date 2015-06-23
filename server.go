@@ -39,7 +39,7 @@ func main() {
 		rest.Post("/status", i.PostStatus),
 		rest.Post("/follow", i.FollowUser),
 		rest.Post("/unfollow", i.UnfollowUser),
-		rest.Get("/timeline", i.GetTimeline),
+		rest.Get("/timelines", i.GetTimeline),
 		rest.Get("/users", i.GetUser),
 		// uncomment if you would also like to serve files
 		//rest.Get("/", homeHandler),
@@ -223,12 +223,19 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	uid, err := strconv.Atoi(v.Get("uid"))
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	var uid int
+	if _, val := v["uid"]; val {
+		uid, _ = strconv.Atoi(v.Get("uid"))
+	} else if _, val := v["login"]; val {
+		uid = i.DB.GetUserID(v.Get("login"))
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		rest.NotFound(w, r)
 	}
+
 	page, err := strconv.Atoi(v.Get("page"))
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -282,7 +289,9 @@ Loop:
 	// of what order they will appear in output.Posts, so we must sort them
 	// if we want them to appear from newest to oldest
 	sort.Sort(output.Posts)
-	w.WriteJson(&output)
+	res2 := make([]TimelineResponse, 1)
+	res2[0] = *output
+	w.WriteJson(map[string]interface{}{"timeline": res2})
 }
 
 /*

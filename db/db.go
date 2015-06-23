@@ -149,6 +149,14 @@ func (db *DB) GetUserByLogin(login string) (*User, error) {
 	return &user, nil
 }
 
+func (db *DB) GetUserID(login string) int {
+	c := db.Get()
+	defer c.Close()
+
+	uid, _ := redis.Int(c.Do("HGET", "users:", login))
+	return uid
+}
+
 /********************************************
 *************** Status code ****************/
 
