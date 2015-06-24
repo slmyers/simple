@@ -39,8 +39,8 @@ func main() {
 		rest.Post("/status", i.PostStatus),
 		rest.Post("/follow", i.FollowUser),
 		rest.Post("/unfollow", i.UnfollowUser),
-		rest.Get("/timelines", i.GetTimeline),
-		rest.Get("/users", i.GetUser),
+		rest.Get("/timelines/:login/:page", i.GetTimeline),
+		rest.Get("/users/:login", i.GetUser),
 		// uncomment if you would also like to serve files
 		//rest.Get("/", homeHandler),
 	)
@@ -218,29 +218,34 @@ func (i *Impl) UnfollowUser(w rest.ResponseWriter, r *rest.Request) {
  */
 
 func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
-	v, err := url.ParseQuery(r.URL.RawQuery)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var uid int
-	if _, val := v["uid"]; val {
-		uid, _ = strconv.Atoi(v.Get("uid"))
-	} else if _, val := v["login"]; val {
-		uid = i.DB.GetUserID(v.Get("login"))
+	/*
+		v, err := url.ParseQuery(r.URL.RawQuery)
 		if err != nil {
 			rest.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	} else {
-		rest.NotFound(w, r)
-	}
+		var uid int
+		if _, val := v["uid"]; val {
+			uid, _ = strconv.Atoi(v.Get("uid"))
+		} else if _, val := v["login"]; val {
+			uid = i.DB.GetUserID(v.Get("login"))
+			if err != nil {
+				rest.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			rest.NotFound(w, r)
+		}
 
-	page, err := strconv.Atoi(v.Get("page"))
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+		page, err := strconv.Atoi(v.Get("page"))
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	*/
+	login := r.PathParam("login")
+	page, _ := strconv.Atoi(r.PathParam("page"))
+	uid := i.DB.GetUserID(login)
 
 	res, err := i.DB.GetUserTimeline(uid, page, 30)
 	if err != nil {
@@ -248,11 +253,13 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	output := new(TimelineResponse)
-	output.Posts = make([]rdb.Status, len(res))
-	output.Uid = uid
-	output.Page = page
-	outputIndex := 0
+	timelineOutput := new(TimelineHeader)
+	timelineOutput.PostIds = res
+	//output.Posts = make([]rdb.Status, len(res))
+	posts := make(Statuses, len(res))
+	timelineOutput.Page = page
+	timelineOutput.Login = login
+	timelineOutput.Id = login + "/" + strconv.Itoa(page)
 	// channel to send/recieve status structs
 	statuses := make(chan rdb.Status, len(res))
 	defer close(statuses)
@@ -273,11 +280,12 @@ func (i *Impl) GetTimeline(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	// this code is blocking
+	outputIndex := 0
 Loop:
 	for outputIndex < len(res) {
 		select {
 		case sts := <-statuses:
-			output.Posts[outputIndex] = sts
+			posts[outputIndex] = sts
 			outputIndex++
 		case <-time.After(time.Second * 1):
 			log.Printf("timeout getting timeline:%d page:%d\n", uid,
@@ -288,10 +296,12 @@ Loop:
 	// because the statuses were retrieved concurrently we can't be sure
 	// of what order they will appear in output.Posts, so we must sort them
 	// if we want them to appear from newest to oldest
-	sort.Sort(output.Posts)
-	res2 := make([]TimelineResponse, 1)
-	res2[0] = *output
-	w.WriteJson(map[string]interface{}{"timeline": res2})
+	sort.Sort(posts)
+
+	output := make(map[string]interface{})
+	output["posts"] = posts
+	output["timeline"] = timelineOutput
+	w.WriteJson(&output)
 }
 
 /*
@@ -299,35 +309,15 @@ Loop:
  */
 
 func (i *Impl) GetUser(w rest.ResponseWriter, r *rest.Request) {
-	v, err := url.ParseQuery(r.URL.RawQuery)
+	login := r.PathParam("login")
+	usr, err := i.DB.GetUserByLogin(login)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if uid, ok := v["uid"]; ok {
-		id, _ := strconv.Atoi(uid[0])
-		usr, err := i.DB.GetUser(id)
-		if err != nil {
-			rest.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		res := make(rdb.Users, 1)
-		res[0] = *usr
-		w.WriteJson(&res)
-		return
-	} else if login, ok := v["login"]; ok {
-		usr, err := i.DB.GetUserByLogin(login[0])
-		if err != nil {
-			rest.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		res := make(rdb.Users, 1)
-		res[0] = *usr
-		// http://dukex.svbtle.com/tip-golang-with-emberjs-json-response
-		w.WriteJson(map[string]interface{}{"user": res})
-		return
-	} else {
+	if usr == nil {
 		rest.NotFound(w, r)
 		return
 	}
+	w.WriteJson(map[string]interface{}{"user": usr})
 }

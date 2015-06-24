@@ -12,9 +12,14 @@ type StatusPayload struct {
 	Msg string `json:"msg"`
 }
 
-type TimelineResponse struct {
-	Uid   int      `json:"id"`
-	Page  int      `json:"page"`
+type TimelineHeader struct {
+	Id      string `json:"id"`
+	Login   string `json:"login"`
+	Page    int    `json:"page"`
+	PostIds []int  `json:"posts"`
+}
+
+type Posts struct {
 	Posts Statuses `json:"posts"`
 }
 
